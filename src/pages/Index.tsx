@@ -124,7 +124,7 @@ const Index = () => {
       </section>
 
       {/* Objects */}
-      <section className="border-t bg-secondary py-16">
+      <section id="objects" className="border-t bg-secondary py-16">
         <div className="container">
           <span className="text-sm font-medium text-muted-foreground">Objects</span>
           <h2 className="mt-1 font-display text-2xl font-bold md:text-3xl">
