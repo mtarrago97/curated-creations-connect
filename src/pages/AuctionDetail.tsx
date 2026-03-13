@@ -69,13 +69,18 @@ const AuctionDetail = () => {
       toast.error(`Minimum bid is $${minBid.toLocaleString()}`);
       return;
     }
-    // In a real app this would go through auth + Stripe
-    toast.info("Please sign in to place a bid", {
-      action: {
-        label: "Sign In",
-        onClick: () => navigate("/auth"),
-      },
-    });
+    if (!user) {
+      toast.info("Please sign in to place a bid", {
+        action: {
+          label: "Sign In",
+          onClick: () => navigate("/auth"),
+        },
+      });
+      return;
+    }
+    // TODO: Will integrate with Stripe checkout for payment hold
+    toast.success(`Bid of $${amount.toLocaleString()} placed! (Demo mode — Stripe integration pending)`);
+    setBidAmount("");
   };
 
   // Simulated bid history
