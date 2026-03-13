@@ -105,7 +105,7 @@ const Index = () => {
       </section>
 
       {/* Experiences */}
-      <section className="container py-16">
+      <section id="experiences" className="container py-16">
         <span className="text-sm font-medium text-muted-foreground">Experiences</span>
         <h2 className="mt-1 font-display text-2xl font-bold md:text-3xl">
           Moments money can't buy.
