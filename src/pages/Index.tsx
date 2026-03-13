@@ -81,7 +81,7 @@ const Index = () => {
       </section>
 
       {/* Live Now */}
-      <section className="border-t bg-secondary py-16">
+      <section id="live-now" className="border-t bg-secondary py-16">
         <div className="container">
           <div className="flex items-center gap-3">
             <LiveBadge />
