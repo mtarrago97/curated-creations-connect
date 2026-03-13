@@ -145,7 +145,7 @@ const Index = () => {
       </section>
 
       {/* Creators */}
-      <section className="container py-16">
+      <section id="creators" className="container py-16">
         <h2 className="font-display text-2xl font-bold md:text-3xl">Meet the creators.</h2>
         <p className="mt-2 max-w-lg text-muted-foreground">
           Connect with verified creators selling one-of-a-kind items and experiences.
