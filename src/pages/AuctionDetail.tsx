@@ -9,9 +9,11 @@ import Footer from "@/components/Footer";
 import LiveBadge from "@/components/LiveBadge";
 import AuctionCard from "@/components/AuctionCard";
 import { auctions } from "@/data/auctions";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 const AuctionDetail = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const auction = auctions.find((a) => a.id === id);
