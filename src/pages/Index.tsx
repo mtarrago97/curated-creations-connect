@@ -81,7 +81,7 @@ const Index = () => {
       </section>
 
       {/* Live Now */}
-      <section className="border-t bg-secondary py-16">
+      <section id="live-now" className="border-t bg-secondary py-16">
         <div className="container">
           <div className="flex items-center gap-3">
             <LiveBadge />
@@ -105,7 +105,7 @@ const Index = () => {
       </section>
 
       {/* Experiences */}
-      <section className="container py-16">
+      <section id="experiences" className="container py-16">
         <span className="text-sm font-medium text-muted-foreground">Experiences</span>
         <h2 className="mt-1 font-display text-2xl font-bold md:text-3xl">
           Moments money can't buy.
@@ -124,7 +124,7 @@ const Index = () => {
       </section>
 
       {/* Objects */}
-      <section className="border-t bg-secondary py-16">
+      <section id="objects" className="border-t bg-secondary py-16">
         <div className="container">
           <span className="text-sm font-medium text-muted-foreground">Objects</span>
           <h2 className="mt-1 font-display text-2xl font-bold md:text-3xl">
@@ -145,7 +145,7 @@ const Index = () => {
       </section>
 
       {/* Creators */}
-      <section className="container py-16">
+      <section id="creators" className="container py-16">
         <h2 className="font-display text-2xl font-bold md:text-3xl">Meet the creators.</h2>
         <p className="mt-2 max-w-lg text-muted-foreground">
           Connect with verified creators selling one-of-a-kind items and experiences.
