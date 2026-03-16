@@ -1,13 +1,17 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
+
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+
 import { AuthProvider } from "@/hooks/useAuth";
+
 import Index from "./pages/Index.tsx";
 import AuctionDetail from "./pages/AuctionDetail.tsx";
 import Auth from "./pages/Auth.tsx";
 import NotFound from "./pages/NotFound.tsx";
+import CreateAuctionPage from "./pages/CreateAuction";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +26,10 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auction/:id" element={<AuctionDetail />} />
             <Route path="/auth" element={<Auth />} />
+
+            {/* 👉 New Route for creators starting an auction */}
+            <Route path="/create-auction" element={<CreateAuctionPage />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
