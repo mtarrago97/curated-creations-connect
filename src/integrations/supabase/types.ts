@@ -19,7 +19,9 @@ export type Database = {
           bid_count: number
           category: string
           created_at: string
+          creator_avatar: string | null
           creator_id: string
+          creator_name: string
           current_bid: number
           description: string | null
           ends_at: string
@@ -37,7 +39,9 @@ export type Database = {
           bid_count?: number
           category?: string
           created_at?: string
+          creator_avatar?: string | null
           creator_id: string
+          creator_name?: string
           current_bid?: number
           description?: string | null
           ends_at: string
@@ -55,7 +59,9 @@ export type Database = {
           bid_count?: number
           category?: string
           created_at?: string
+          creator_avatar?: string | null
           creator_id?: string
+          creator_name?: string
           current_bid?: number
           description?: string | null
           ends_at?: string
