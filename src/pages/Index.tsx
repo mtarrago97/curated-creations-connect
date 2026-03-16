@@ -54,7 +54,7 @@ const Index = () => {
             <Button size="lg" onClick={() => navigate("/")}>
               Explore Auctions
             </Button>
-            <Button size="lg" variant="outline" onClick={() => navigate("/auth")}>
+            <Button size="lg" variant="outline" onClick={() => navigate("/create-auction")}>
               Start Selling <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </motion.div>
