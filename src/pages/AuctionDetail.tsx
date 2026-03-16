@@ -8,41 +8,59 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import LiveBadge from "@/components/LiveBadge";
 import AuctionCard from "@/components/AuctionCard";
-import { auctions } from "@/data/auctions";
+import { useAuction, useAuctions, useBidHistory, resolveImageUrl, getTimeRemaining } from "@/hooks/useAuctions";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 const AuctionDetail = () => {
   const { user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
-  const auction = auctions.find((a) => a.id === id);
+  const queryClient = useQueryClient();
+  const { data: auction, isLoading } = useAuction(id);
+  const { data: allAuctions = [] } = useAuctions();
+  const { data: bids = [] } = useBidHistory(id);
   const [bidAmount, setBidAmount] = useState("");
-  const [timeLeft, setTimeLeft] = useState(auction?.endsIn || "00:00:00");
+  const [timeLeft, setTimeLeft] = useState("00:00:00");
+  const [placing, setPlacing] = useState(false);
 
-  // Simple countdown simulation
+  // Live countdown
   useEffect(() => {
     if (!auction) return;
-    const parts = auction.endsIn.split(":").map(Number);
-    let totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
-
-    const interval = setInterval(() => {
-      totalSeconds--;
-      if (totalSeconds <= 0) {
-        clearInterval(interval);
-        setTimeLeft("00:00:00");
-        return;
-      }
-      const h = Math.floor(totalSeconds / 3600);
-      const m = Math.floor((totalSeconds % 3600) / 60);
-      const s = totalSeconds % 60;
-      setTimeLeft(
-        `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-      );
-    }, 1000);
-
+    const update = () => setTimeLeft(getTimeRemaining(auction.ends_at));
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [auction]);
+
+  // Realtime subscription for bid updates
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`auction-${id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "auctions", filter: `id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["auction", id] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "bids", filter: `auction_id=eq.${id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ["bids", id] });
+        queryClient.invalidateQueries({ queryKey: ["auction", id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id, queryClient]);
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <Navbar />
+        <div className="container flex flex-1 items-center justify-center">
+          <p className="text-muted-foreground">Loading auction...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!auction) {
     return (
@@ -51,19 +69,17 @@ const AuctionDetail = () => {
         <div className="container flex flex-1 items-center justify-center">
           <div className="text-center">
             <h1 className="font-display text-2xl font-bold">Auction not found</h1>
-            <Button className="mt-4" onClick={() => navigate("/")}>
-              Go Home
-            </Button>
+            <Button className="mt-4" onClick={() => navigate("/")}>Go Home</Button>
           </div>
         </div>
       </div>
     );
   }
 
-  const minBid = auction.currentBid + 50;
-  const relatedAuctions = auctions.filter((a) => a.id !== auction.id && a.type === auction.type).slice(0, 3);
+  const minBid = Number(auction.current_bid) + 50;
+  const relatedAuctions = allAuctions.filter((a) => a.id !== auction.id && a.type === auction.type).slice(0, 3);
 
-  const handlePlaceBid = () => {
+  const handlePlaceBid = async () => {
     const amount = Number(bidAmount);
     if (!amount || amount < minBid) {
       toast.error(`Minimum bid is $${minBid.toLocaleString()}`);
@@ -71,24 +87,27 @@ const AuctionDetail = () => {
     }
     if (!user) {
       toast.info("Please sign in to place a bid", {
-        action: {
-          label: "Sign In",
-          onClick: () => navigate("/auth"),
-        },
+        action: { label: "Sign In", onClick: () => navigate("/auth") },
       });
       return;
     }
-    // TODO: Will integrate with Stripe checkout for payment hold
-    toast.success(`Bid of $${amount.toLocaleString()} placed! (Demo mode — Stripe integration pending)`);
-    setBidAmount("");
-  };
 
-  // Simulated bid history
-  const bidHistory = Array.from({ length: 5 }, (_, i) => ({
-    bidder: `User${Math.floor(Math.random() * 900) + 100}`,
-    amount: auction.currentBid - i * Math.floor(Math.random() * 200 + 50),
-    time: `${Math.floor(Math.random() * 30) + 1}m ago`,
-  }));
+    setPlacing(true);
+    try {
+      const { error } = await supabase.from("bids").insert({
+        auction_id: auction.id,
+        bidder_id: user.id,
+        amount,
+      });
+      if (error) throw error;
+      toast.success(`Bid of $${amount.toLocaleString()} placed successfully!`);
+      setBidAmount("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to place bid");
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,16 +134,12 @@ const AuctionDetail = () => {
           >
             <div className="relative overflow-hidden rounded-2xl">
               <img
-                src={auction.image}
+                src={resolveImageUrl(auction.image_url)}
                 alt={auction.title}
                 className="aspect-square w-full object-cover"
               />
               <div className="absolute left-4 top-4 flex items-center gap-2">
-                {auction.isLive && <LiveBadge />}
-              </div>
-              <div className="absolute right-4 top-4 flex items-center gap-1 rounded-full bg-foreground/60 px-3 py-1.5 text-sm text-primary-foreground backdrop-blur-sm">
-                <Eye className="h-4 w-4" />
-                {auction.watchers} watching
+                {auction.is_live && <LiveBadge />}
               </div>
             </div>
           </motion.div>
@@ -139,32 +154,25 @@ const AuctionDetail = () => {
             {/* Creator */}
             <div className="flex items-center gap-3">
               <img
-                src={auction.creatorAvatar}
-                alt={auction.creator}
+                src={auction.creator_avatar || ""}
+                alt={auction.creator_name}
                 className="h-10 w-10 rounded-full"
               />
               <div>
-                <p className="text-sm font-medium">{auction.creator}</p>
+                <p className="text-sm font-medium">{auction.creator_name}</p>
                 <p className="text-xs text-muted-foreground">Verified Creator</p>
               </div>
             </div>
 
-            <h1 className="mt-4 font-display text-2xl font-bold md:text-3xl">
-              {auction.title}
-            </h1>
-
-            <p className="mt-4 text-muted-foreground leading-relaxed">
-              {auction.description}
-            </p>
+            <h1 className="mt-4 font-display text-2xl font-bold md:text-3xl">{auction.title}</h1>
+            <p className="mt-4 text-muted-foreground leading-relaxed">{auction.description}</p>
 
             {/* Timer + Price */}
             <div className="mt-6 grid grid-cols-2 gap-4">
               <div className="rounded-xl border bg-secondary p-4">
                 <p className="text-xs text-muted-foreground">Current Bid</p>
-                <p className="font-display text-3xl font-bold">
-                  ${auction.currentBid.toLocaleString()}
-                </p>
-                <p className="text-xs text-muted-foreground">{auction.bids} bids</p>
+                <p className="font-display text-3xl font-bold">${Number(auction.current_bid).toLocaleString()}</p>
+                <p className="text-xs text-muted-foreground">{auction.bid_count} bids</p>
               </div>
               <div className="rounded-xl border bg-secondary p-4">
                 <p className="text-xs text-muted-foreground">Ends in</p>
@@ -172,18 +180,14 @@ const AuctionDetail = () => {
                   <Clock className="h-6 w-6" />
                   {timeLeft}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Started at ${auction.startingPrice.toLocaleString()}
-                </p>
+                <p className="text-xs text-muted-foreground">Started at ${Number(auction.starting_price).toLocaleString()}</p>
               </div>
             </div>
 
             {/* Bid Input */}
             <div className="mt-6 rounded-xl border bg-card p-6">
               <p className="text-sm font-medium">Place a Bid</p>
-              <p className="text-xs text-muted-foreground">
-                Minimum bid: ${minBid.toLocaleString()}
-              </p>
+              <p className="text-xs text-muted-foreground">Minimum bid: ${minBid.toLocaleString()}</p>
               <div className="mt-3 flex gap-3">
                 <div className="relative flex-1">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
@@ -195,8 +199,8 @@ const AuctionDetail = () => {
                     className="pl-7"
                   />
                 </div>
-                <Button onClick={handlePlaceBid} className="px-8">
-                  Place Bid
+                <Button onClick={handlePlaceBid} className="px-8" disabled={placing}>
+                  {placing ? "Placing..." : "Place Bid"}
                 </Button>
               </div>
               <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -207,28 +211,27 @@ const AuctionDetail = () => {
 
             {/* Actions */}
             <div className="mt-4 flex gap-3">
-              <Button variant="outline" size="sm">
-                <Heart className="mr-1.5 h-4 w-4" /> Save
-              </Button>
-              <Button variant="outline" size="sm">
-                <Share2 className="mr-1.5 h-4 w-4" /> Share
-              </Button>
+              <Button variant="outline" size="sm"><Heart className="mr-1.5 h-4 w-4" /> Save</Button>
+              <Button variant="outline" size="sm"><Share2 className="mr-1.5 h-4 w-4" /> Share</Button>
             </div>
 
             {/* Bid History */}
             <div className="mt-8">
               <h3 className="font-display font-semibold">Recent Bids</h3>
               <div className="mt-3 space-y-2">
-                {bidHistory.map((bid, i) => (
+                {bids.length === 0 && (
+                  <p className="text-sm text-muted-foreground">No bids yet. Be the first!</p>
+                )}
+                {bids.map((bid) => (
                   <div
-                    key={i}
+                    key={bid.id}
                     className="flex items-center justify-between rounded-lg bg-secondary px-4 py-3 text-sm"
                   >
-                    <span className="font-medium">{bid.bidder}</span>
-                    <span className="font-display font-bold">
-                      ${bid.amount.toLocaleString()}
+                    <span className="font-medium">Bidder</span>
+                    <span className="font-display font-bold">${Number(bid.amount).toLocaleString()}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(bid.created_at).toLocaleTimeString()}
                     </span>
-                    <span className="text-xs text-muted-foreground">{bid.time}</span>
                   </div>
                 ))}
               </div>

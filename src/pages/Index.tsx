@@ -9,7 +9,8 @@ import ExperienceCard from "@/components/ExperienceCard";
 import CreatorCard from "@/components/CreatorCard";
 import LiveBadge from "@/components/LiveBadge";
 import heroImage from "@/assets/hero-objects.jpg";
-import { auctions, creators } from "@/data/auctions";
+import { useAuctions } from "@/hooks/useAuctions";
+import { creators } from "@/data/auctions";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 30 },
@@ -22,7 +23,9 @@ const stagger = {
 
 const Index = () => {
   const navigate = useNavigate();
-  const liveAuctions = auctions.filter((a) => a.isLive);
+  const { data: auctions = [], isLoading } = useAuctions();
+
+  const liveAuctions = auctions.filter((a) => a.is_live);
   const experiences = auctions.filter((a) => a.type === "experience");
   const objects = auctions.filter((a) => a.type === "object");
 
@@ -93,11 +96,15 @@ const Index = () => {
           <p className="mt-1 text-sm text-muted-foreground">
             {liveAuctions.length} auctions live
           </p>
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {liveAuctions.slice(0, 4).map((a) => (
-              <AuctionCard key={a.id} auction={a} />
-            ))}
-          </div>
+          {isLoading ? (
+            <p className="mt-8 text-muted-foreground">Loading auctions...</p>
+          ) : (
+            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {liveAuctions.slice(0, 4).map((a) => (
+                <AuctionCard key={a.id} auction={a} />
+              ))}
+            </div>
+          )}
           <div className="mt-8 text-center">
             <Button variant="outline">View All Live</Button>
           </div>
